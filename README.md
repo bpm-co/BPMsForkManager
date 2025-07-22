@@ -3,7 +3,7 @@
 Una herramienta web para gestionar y sincronizar todos los forks del repositorio **bpm-co/BPMs**.
 
 ## 🌐 Acceso directo
-**[👉 Abrir Fork Manager](https://bpm-co.github.io/fork-manager/)**
+**[👉 Abrir Fork Manager](https://bpm-co.github.io/BPMsForkManager/)**
 
 ## ✨ Características
 
@@ -20,7 +20,7 @@ Una herramienta web para gestionar y sincronizar todos los forks del repositorio
    - Crea un token con permisos `repo` y `workflow`
 
 2. **Abre la herramienta:**
-   - Visita: https://bpm-co.github.io/fork-manager/
+   - Visita: https://bpm-co.github.io/BPMsForkManager/
    - Ingresa tu token de GitHub
    - Click en "Cargar Forks"
 
@@ -80,4 +80,4 @@ MIT License - Libre para usar y modificar.
 
 ---
 
-**Desarrollado para bpm-co** 🚀
+**Desarrollado para BPMco** 🚀
