@@ -527,15 +527,11 @@
             currentForks = []; // Reset
             
             try {
-                console.log(`🔄 Starting fork loading process for ${owner}/${repo}`);
-                
                 // Obtener información del repositorio padre
                 const parentRepo = await makeGitHubRequest(`https://api.github.com/repos/${owner}/${repo}`);
-                console.log('✅ Parent repo loaded:', parentRepo.full_name);
                 
                 // Obtener lista de forks
                 const forks = await makeGitHubRequest(`https://api.github.com/repos/${owner}/${repo}/forks`);
-                console.log(`✅ Found ${forks.length} forks`);
 
                 if (!Array.isArray(forks) || forks.length === 0) {
                     document.getElementById('forksContainer').innerHTML = `
@@ -552,12 +548,9 @@
 
                 // PROCESAMIENTO SECUENCIAL - UNO A LA VEZ
                 for (let i = 0; i < forks.length; i++) {
-                    console.log(`\n🔍 Processing fork ${i + 1}/${forks.length}: ${forks[i]?.full_name || 'Unknown'}`);
-                    
                     try {
                         const processedFork = await processIndividualFork(forks[i], i, owner, repo, parentRepo);
                         currentForks.push(processedFork);
-                        console.log(`✅ Successfully processed: ${processedFork.full_name}`);
                     } catch (error) {
                         console.error(`❌ Error processing fork ${i + 1}:`, error.message);
                         const errorFork = createSafeForkObject(forks[i], i, error);
@@ -586,8 +579,6 @@
                 throw new Error('Fork data incomplete');
             }
 
-            console.log(`  📋 Processing: ${rawFork.full_name}`);
-
             // Obtener detalles del fork
             const forkDetails = await makeGitHubRequest(`https://api.github.com/repos/${rawFork.full_name}`);
             const defaultBranch = forkDetails.default_branch || rawFork.default_branch || 'main';
@@ -596,26 +587,18 @@
             safeResult.default_branch = defaultBranch;
             safeResult.forkDetails = forkDetails;
 
-            console.log(`  🔍 Trying multiple methods to get accurate status`);
-
             let comparisonResult = null;
             let methodUsed = 'unknown';
 
             // MÉTODO 1: Intentar GraphQL API de GitHub (más precisa)
             try {
-                console.log(`  🚀 Trying GraphQL API...`);
                 comparisonResult = await getComparisonWithGraphQL(owner, repo, rawFork, defaultBranch, parentRepo.default_branch);
                 methodUsed = 'graphql';
-                console.log(`  ✅ GraphQL success:`, comparisonResult);
-            } catch (error) {
-                console.log(`  ❌ GraphQL failed: ${error.message}`);
-                
+            } catch (error) {                
                 // MÉTODO 2: Comparación directa de commits (más fiable que comparaciones)
                 try {
-                    console.log(`  🔄 Trying commit comparison...`);
                     comparisonResult = await getComparisonWithCommits(owner, repo, rawFork, defaultBranch, parentRepo.default_branch);
                     methodUsed = 'commits';
-                    console.log(`  ✅ Commit comparison success:`, comparisonResult);
                 } catch (error2) {
                     console.log(`  ❌ Commit comparison failed: ${error2.message}`);
                     
@@ -644,9 +627,6 @@
             if (hasOwnCommits && needsSync) detailedStatus = 'diverged';
             else if (hasOwnCommits) detailedStatus = 'ahead'; // Este es el "desactualizado" de GitHub
             else if (needsSync) detailedStatus = 'behind';    // Este está "actualizado" pero necesita sync
-
-            console.log(`  📊 Final analysis (${methodUsed}): ${behindCount} behind, ${aheadCount} ahead`);
-            console.log(`  🎯 GitHub would show: ${isGitHubOutOfDate ? 'OUT-OF-DATE (has own commits)' : 'UP-TO-DATE'}, needs sync: ${needsSync}`);
 
             // ACTUALIZAR RESULTADO CON VALORES CALCULADOS
             safeResult.isUpToDate = isUpToDate;
@@ -754,9 +734,7 @@
         }
 
         // MÉTODO 2: Comparación directa usando commits más recientes
-        async function getComparisonWithCommits(owner, repo, fork, forkBranch, parentBranch) {
-            console.log(`    📡 Getting latest commits from both repos...`);
-            
+        async function getComparisonWithCommits(owner, repo, fork, forkBranch, parentBranch) {        
             // Obtener último commit del repositorio padre
             const parentCommits = await makeGitHubRequest(`https://api.github.com/repos/${owner}/${repo}/commits?sha=${parentBranch}&per_page=1`);
             const parentLatestSha = parentCommits[0]?.sha;
@@ -768,8 +746,6 @@
             if (!parentLatestSha || !forkLatestSha) {
                 throw new Error('Could not get latest commit SHAs');
             }
-
-            console.log(`    🔍 Parent SHA: ${parentLatestSha.substring(0, 7)}, Fork SHA: ${forkLatestSha.substring(0, 7)}`);
 
             // Si los SHA son iguales, está actualizado
             if (parentLatestSha === forkLatestSha) {
@@ -785,8 +761,6 @@
 
             // Comparar usando los SHA específicos
             const compareUrl = `https://api.github.com/repos/${owner}/${repo}/compare/${parentLatestSha}...${forkLatestSha}`;
-            console.log(`    🔗 Comparing: ${compareUrl}`);
-            
             const compareResult = await makeGitHubRequest(compareUrl);
 
             return {
@@ -837,19 +811,13 @@
 
         // FUNCIÓN FALLBACK PARA USAR LA API DE COMPARACIÓN SI EL ENDPOINT DE GITHUB FALLA
         async function fallbackToApiComparison(fork, owner, repo, forkBranch, parentBranch) {
-            console.log(`  🔄 Using API comparison fallback`);
-            
             // Preparar URLs de comparación (método original)
             const comparisonUrls = buildComparisonUrls(fork, owner, repo, forkBranch, parentBranch);
             
             // Intentar comparación con API
             for (let urlIndex = 0; urlIndex < comparisonUrls.length; urlIndex++) {
                 try {
-                    console.log(`    API attempt ${urlIndex + 1}: ${comparisonUrls[urlIndex]}`);
                     const comparisonResult = await makeGitHubRequest(comparisonUrls[urlIndex]);
-                    
-                    console.log(`    ✅ API comparison success`);
-                    
                     // Convertir resultado de API al formato esperado
                     return {
                         ahead: comparisonResult.behind_by || 0,  // Fork está adelante
@@ -1204,18 +1172,11 @@
             showMessage(`📋 Debug exportado: ${debugData.totalForks} forks (${debugData.summary.outOfDate} desactualizados, ${debugData.summary.needs_sync} necesitan sync)`, 'success');
         }
 
-        // Configuración y eventos - SIN campos de owner/repo
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('🚀 GitHub Fork Manager loaded - Configurado para bpm-co/BPMs');
-        });
-
         document.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 loadForks();
             }
         });
-
-        console.log('🚀 GitHub Fork Manager loaded - Sistema simplificado');
     </script>
 </body>
 </html>
